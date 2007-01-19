@@ -46,6 +46,9 @@ namespace GoArrow
 	[FriendlyName("GoArrow")]
 	public partial class PluginCore : PluginBase
 	{
+		const string AttachArrowCommand = "GoArrow_AttachArrow";
+		const string SelectItemCommand = "GoArrow_SelectItem";
+
 		internal HudManager mHudManager;
 		internal MapHud mMapHud;
 		internal DungeonHud mDungeonHud;
@@ -539,20 +542,18 @@ namespace GoArrow
 						}
 					}
 				}
-				else if (e.Text == "GoArrow_SelectItem")
+				else if (e.Text == SelectItemCommand)
 				{
 					Host.Actions.SelectItem(e.Id);
 					e.Eat = true;
 				}
-				else if (e.Text.StartsWith("GoArrow_AttachArrow"))
+				else if (e.Text == AttachArrowCommand)
 				{
 					AttachCommand(e.Id, false);
 					e.Eat = true;
 				}
-				else if (Util.HandleChatCommand(e))
-				{
-					e.Eat = true;
-				}
+
+				Util.HandleChatCommand(sender, e);
 			}
 			catch (Exception ex) { Util.HandleException(ex); }
 		}
@@ -569,12 +570,12 @@ namespace GoArrow
 
 		public string MakeAttachArrowChatLink(int objectId, string text)
 		{
-			return "<Tell:IIDString:" + objectId + ":GoArrow_AttachArrow>" + text + @"<\Tell>";
+			return "<Tell:IIDString:" + objectId + ":" + AttachArrowCommand + ">" + text + @"<\Tell>";
 		}
 
 		private string MakeSelectItemChatLink(int objectId, string text)
 		{
-			return "<Tell:IIDString:" + objectId + ":GoArrow_SelectItem>" + text + @"<\Tell>";
+			return "<Tell:IIDString:" + objectId + ":" + SelectItemCommand + ">" + text + @"<\Tell>";
 		}
 		#endregion
 
@@ -1064,8 +1065,8 @@ namespace GoArrow
 				}
 				else if (mArrowHud.HasDestinationObject)
 				{
-					return mArrowHud.DestinationObject.Name 
-						+ (mArrowHud.DestinationObject.IsValid ? "" : " (out of range)") 
+					return mArrowHud.DestinationObject.Name
+						+ (mArrowHud.DestinationObject.IsValid ? "" : " (out of range)")
 						+ " [" + mArrowHud.DestinationCoords + "]";
 				}
 
