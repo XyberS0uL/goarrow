@@ -803,11 +803,11 @@ namespace GoArrow
 			sldHudOpacityInactive.SliderPostition =
 				mDungeonHud.AlphaFrameInactive = mMapHud.AlphaFrameInactive;
 
-			chkOutputs[0].Checked = (Util.DefaultTargetWindows & ChatWindow.MainChat) != 0;
-			chkOutputs[1].Checked = (Util.DefaultTargetWindows & ChatWindow.One) != 0;
-			chkOutputs[2].Checked = (Util.DefaultTargetWindows & ChatWindow.Two) != 0;
-			chkOutputs[3].Checked = (Util.DefaultTargetWindows & ChatWindow.Three) != 0;
-			chkOutputs[4].Checked = (Util.DefaultTargetWindows & ChatWindow.Four) != 0;
+			chkOutputs[0].Checked = (Util.DefaultWindow & ChatWindow.MainChat) != 0;
+			chkOutputs[1].Checked = (Util.DefaultWindow & ChatWindow.One) != 0;
+			chkOutputs[2].Checked = (Util.DefaultWindow & ChatWindow.Two) != 0;
+			chkOutputs[3].Checked = (Util.DefaultWindow & ChatWindow.Three) != 0;
+			chkOutputs[4].Checked = (Util.DefaultWindow & ChatWindow.Four) != 0;
 
 			DefaultView.Underlying.OnActivate += new Decal.Interop.Inject.IViewEvents_OnActivateEventHandler(MainView_OnActivate);
 			DefaultView.Underlying.OnDeactivate += new Decal.Interop.Inject.IViewEvents_OnDeactivateEventHandler(MainView_OnDeactivate);
@@ -3527,8 +3527,8 @@ namespace GoArrow
 				catch (Exception ex)
 				{
 					txtDownloadStatusA.Text = "Update failed!";
-					Util.Error("Failed to open downloaded locations file; make sure you have the right "
-						+ "database URL and type selected (" + ex.GetType().Name + ": " + ex.Message + ")");
+					Util.HandleException(ex, "Failed to open downloaded locations file; make sure "
+						+ "you have the right database URL and type selected", false);
 
 					try { File.Delete(codLocationsXmlPath); }
 					catch { /* Ignore */ }
@@ -3727,10 +3727,10 @@ namespace GoArrow
 		{
 			try
 			{
-				Util.SetTargetWindow(window, enabled);
-				if (Util.DefaultTargetWindows == ChatWindow.None)
+				Util.SetDefaultWindow(window, enabled);
+				if (Util.DefaultWindow == ChatWindow.Default)
 				{
-					Util.SetTargetWindow(ChatWindow.MainChat, true);
+					Util.SetDefaultWindow(ChatWindow.MainChat, true);
 					chkOutputs[0].Checked = true;
 					if (window != ChatWindow.MainChat)
 					{

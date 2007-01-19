@@ -27,7 +27,10 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Threading;
+
 using WindowsTimer = System.Windows.Forms.Timer;
+using Process = System.Diagnostics.Process;
+using ProcessStartInfo = System.Diagnostics.ProcessStartInfo;
 
 using Decal.Adapter;
 using Decal.Adapter.Wrappers;
@@ -39,7 +42,7 @@ namespace GoArrow
 	[Flags]
 	enum ChatWindow
 	{
-		None = 0,
+		Default = 0,
 		MainChat = 0x01,
 		One = 0x02,
 		Two = 0x04,
@@ -76,8 +79,7 @@ namespace GoArrow
 		private static string mBasePath = null;
 		private static PluginHost mHost = null;
 		private static Thread mMainPluginThread = null;
-		//private static int mDefaultTargetWindow = MainChat;
-		private static ChatWindow mTargetWindows;
+		private static ChatWindow mDefaultWindow;
 		private static bool mWriteErrorsToMainChat;
 		private static int mNumExceptionsWritten;
 
@@ -88,25 +90,34 @@ namespace GoArrow
 		private static int mNextChatActionId;
 		private const int MaxChatActions = 32;
 		private static string mChatActionCommand;
+		private static string mOpenErrorsTxtCommand;
+		private static string mOpenPluginFolderCommand;
+		private static int mChatLinkId;
 
 		public static void Initialize(string pluginName, PluginHost host, string basePath)
 		{
 			mPluginName = pluginName;
-			mChatActionCommand = Regex.Replace(pluginName, @"[^A-Za-z]", "") + "_ChatCommand";
+			mChatLinkId = pluginName.GetHashCode() & int.MaxValue;
+			mChatActionCommand = null;
+			mOpenErrorsTxtCommand = null;
+			mOpenPluginFolderCommand = null;
 			mHost = host;
 			BasePath = basePath;
 			mMainPluginThread = Thread.CurrentThread;
 
-			mTargetWindows = ChatWindow.MainChat;
+			mDefaultWindow = ChatWindow.MainChat;
 			mWriteErrorsToMainChat = true;
 			mNumExceptionsWritten = 0;
 
 			mQueuedActions = new Queue<QueuedAction>();
 
+			mActionQueueTimer = new WindowsTimer();
+			mActionQueueTimer.Tick += new EventHandler(ActionQueueTimer_Tick);
+			mActionQueueTimer.Interval = 100;
+			mActionQueueTimer.Start();
+
 			mChatActions = new SortedList<int, QueuedAction>();
 			mNextChatActionId = 0;
-
-			mActionQueueTimer = null;
 		}
 
 		public static void Dispose()
@@ -115,7 +126,9 @@ namespace GoArrow
 			mMainPluginThread = null;
 
 			mQueuedActions.Clear();
+			mQueuedActions = null;
 			mChatActions.Clear();
+			mChatActions = null;
 
 			if (mActionQueueTimer != null)
 			{
@@ -143,6 +156,11 @@ namespace GoArrow
 		public static string PluginNameVer
 		{
 			get { return PluginName + " v" + PluginVer; }
+		}
+
+		public static int ChatLinkId
+		{
+			get { return mChatLinkId; }
 		}
 
 		public static PluginHost Host
@@ -179,18 +197,18 @@ namespace GoArrow
 			set { mMainPluginThread = value; }
 		}
 
-		public static void SetTargetWindow(ChatWindow window, bool enabled)
+		public static void SetDefaultWindow(ChatWindow window, bool enabled)
 		{
 			if (enabled)
-				DefaultTargetWindows |= window;
+				DefaultWindow |= window;
 			else
-				DefaultTargetWindows &= ~window;
+				DefaultWindow &= ~window;
 		}
 
-		public static ChatWindow DefaultTargetWindows
+		public static ChatWindow DefaultWindow
 		{
-			get { return mTargetWindows; }
-			set { mTargetWindows = value; }
+			get { return mDefaultWindow; }
+			set { mDefaultWindow = value; }
 		}
 
 		public static bool WriteErrorsToMainChat
@@ -247,7 +265,7 @@ namespace GoArrow
 
 		public static void Message(string msg)
 		{
-			Message(msg, DefaultTargetWindows);
+			Message(msg, DefaultWindow);
 		}
 
 		public static void Message(string msg, ChatWindow targetWindows)
@@ -257,7 +275,7 @@ namespace GoArrow
 
 		public static void HelpMessage(string msg)
 		{
-			HelpMessage(msg, DefaultTargetWindows);
+			HelpMessage(msg, DefaultWindow);
 		}
 
 		public static void HelpMessage(string msg, ChatWindow targetWindows)
@@ -267,7 +285,7 @@ namespace GoArrow
 
 		public static void Warning(string msg)
 		{
-			Warning(msg, DefaultTargetWindows);
+			Warning(msg, DefaultWindow);
 		}
 
 		public static void Warning(string msg, ChatWindow targetWindows)
@@ -278,12 +296,12 @@ namespace GoArrow
 
 		public static void Error(string msg)
 		{
-			Error(msg, false, DefaultTargetWindows);
+			Error(msg, false, DefaultWindow);
 		}
 
 		public static void Error(string msg, bool includePluginVersion)
 		{
-			Error(msg, includePluginVersion, DefaultTargetWindows);
+			Error(msg, includePluginVersion, DefaultWindow);
 		}
 
 		public static void Error(string msg, bool includePluginVersion, ChatWindow targetWindows)
@@ -299,7 +317,7 @@ namespace GoArrow
 
 		public static void SevereError(string msg)
 		{
-			SevereError(msg, DefaultTargetWindows);
+			SevereError(msg, DefaultWindow);
 		}
 
 		public static void SevereError(string msg, ChatWindow targetWindows)
@@ -315,7 +333,7 @@ namespace GoArrow
 		[System.Diagnostics.Conditional("DEBUG")]
 		public static void Debug(string msg)
 		{
-			Debug(msg, DefaultTargetWindows);
+			Debug(msg, DefaultWindow);
 		}
 
 		[System.Diagnostics.Conditional("DEBUG")]
@@ -326,12 +344,12 @@ namespace GoArrow
 
 		public static void AddChatText(string msg, int color)
 		{
-			AddChatText(msg, color, DefaultTargetWindows);
+			AddChatText(msg, color, DefaultWindow);
 		}
 
 		public static void AddChatText(string msg, int color, ChatWindow targetWindows)
 		{
-			if (targetWindows == ChatWindow.None)
+			if (targetWindows == ChatWindow.Default)
 			{
 				AddChatText(msg, color, 0);
 			}
@@ -377,8 +395,17 @@ namespace GoArrow
 			}
 		}
 
+		private static string MakeChatLink(string command, string text)
+		{
+			return "<Tell:IIDString:" + ChatLinkId + ":" + command + ">" + text + @"<\Tell>";
+		}
+
 		public static string CreateChatCommand(string text, QueuedAction action)
 		{
+			if (mChatActionCommand == null)
+			{
+				mChatActionCommand = Regex.Replace(PluginName, @"[^A-Za-z]", "") + "_ChatCommand";
+			}
 			if (mChatActions.Count >= MaxChatActions)
 			{
 				mChatActions.RemoveAt(0);
@@ -388,23 +415,49 @@ namespace GoArrow
 			return "<Tell:IIDString:" + id + ":" + mChatActionCommand + ">" + text + @"<\Tell>";
 		}
 
-		public static bool HandleChatCommand(ChatClickInterceptEventArgs e)
+		public static void HandleChatCommand(object sender, ChatClickInterceptEventArgs e)
 		{
-			if (e.Text == mChatActionCommand)
+			try
 			{
-				QueuedAction action;
-				if (mChatActions.TryGetValue(e.Id, out action))
+				if (e.Text == mChatActionCommand)
 				{
-					action();
+					e.Eat = true;
+					QueuedAction action;
+					if (mChatActions.TryGetValue(e.Id, out action))
+					{
+						action();
+					}
+					else
+					{
+						Error("Invalid chat action ID. Only " + MaxChatActions + " chat actions can be active at once");
+
+					}
+
 				}
-				else
+				else if (e.Id == ChatLinkId)
 				{
-					Util.Error("Invalid chat action ID. Only " + MaxChatActions
-						+ " chat actions can be active at once");
+					if (e.Text == mOpenErrorsTxtCommand)
+					{
+						e.Eat = true;
+						if (!File.Exists(FullPath("errors.txt")))
+						{
+							Warning("File does not exist: errors.txt");
+						}
+						else
+						{
+							Message("Opening errors.txt in Notepad...");
+							Process.Start(FullPath("errors.txt"));
+						}
+					}
+					else if (e.Text == mOpenPluginFolderCommand)
+					{
+						e.Eat = true;
+						Message("Opening " + PluginName + " folder in Windows...");
+						Process.Start(new ProcessStartInfo("explorer.exe", "/select," + FullPath("errors.txt")));
+					}
 				}
-				return true;
 			}
-			return false;
+			catch (Exception ex) { HandleException(ex); }
 		}
 
 		/// <summary>Queues an action from another thread to happen on the MainPluginThread.</summary>
@@ -414,14 +467,7 @@ namespace GoArrow
 			lock (mQueuedActions)
 			{
 				mQueuedActions.Enqueue(action);
-
-				if (mActionQueueTimer == null)
-				{
-					mActionQueueTimer = new WindowsTimer();
-					mActionQueueTimer.Tick += new EventHandler(ActionQueueTimer_Tick);
-					mActionQueueTimer.Interval = 100;
-				}
-				mActionQueueTimer.Start();
+				//mActionQueueTimer.Start();
 			}
 		}
 
@@ -429,16 +475,13 @@ namespace GoArrow
 		{
 			try
 			{
-				if (Thread.CurrentThread == MainPluginThread || MainPluginThread == null)
+				lock (mQueuedActions)
 				{
-					lock (mQueuedActions)
+					while (mQueuedActions.Count > 0)
 					{
-						while (mQueuedActions.Count > 0)
-						{
-							mQueuedActions.Dequeue()();
-						}
-						mActionQueueTimer.Stop();
+						mQueuedActions.Dequeue()();
 					}
+					//mActionQueueTimer.Stop();
 				}
 			}
 			catch (Exception ex) { Util.HandleException(ex); }
@@ -461,11 +504,25 @@ namespace GoArrow
 				catch (Exception fwe) { fileWriteException = fwe; }
 
 				string errMsg = messagePrefix + " [" + ex.GetType().Name + "]";
-				if (ex.Message.Length < 100)
+				if (ex.Message.Length < 120)
+				{
 					errMsg += ": " + ex.Message;
+				}
+				else
+				{
+					errMsg += ": " + ex.Message.Substring(0, 100) + "...";
+				}
+
 				if (fileWriteException == null)
 				{
-					errMsg += " See errors.txt in the " + PluginName + " folder for more info.";
+					if (mOpenErrorsTxtCommand == null)
+					{
+						mOpenErrorsTxtCommand = mChatActionCommand + "_ErrorsTxt";
+						mOpenPluginFolderCommand = mChatActionCommand + "_PluginFolder";
+					}
+					string errorsTxt = MakeChatLink(mOpenErrorsTxtCommand, "errors.txt");
+					string pluginFolder = MakeChatLink(mOpenPluginFolderCommand, PluginName + " folder");
+					errMsg += " See " + errorsTxt + " in the " + pluginFolder + " for more info.";
 				}
 				else
 				{
@@ -603,45 +660,5 @@ namespace GoArrow
 			}
 			catch { return stackTrace; }
 		}
-
-#if FALSE
-		private static string StripColorTags(string msg)
-		{
-			if (!msg.Contains("«"))
-				return msg;
-			return Regex.Replace(msg, "«([0-9]{1,2}|d)»", "");
-		}
-
-		private static void WriteToChat(string msg, int defaultColor, int chatTextTarget) {
-			if (mHooks == null)
-				return;
-
-			msg = msg.Replace("«d»", "«" + defaultColor + "»");
-
-			if (!msg.EndsWith("\r"))
-				msg += "\r";
-
-			string[] pieces = msg.Split(new char[] { '«' }, StringSplitOptions.RemoveEmptyEntries);
-			int[] colors = new int[pieces.Length];
-
-			for (int i = 0; i < pieces.Length; i++) {
-				string[] colorAndText = pieces[i].Split(new char[] { '»' }, 2);
-				try {
-					colors[i] = int.Parse(colorAndText[0]);
-					pieces[i] = colorAndText[1];
-				}
-				catch {
-					mHooks.AddChatTextRaw(PluginName +
-						" Error - Malformatted string specified to print to screen ::\r" + msg, 8, chatTextTarget);
-					return;
-				}
-			}
-
-			for (int i = 0; i < pieces.Length; i++) {
-				if (pieces[i] != "")
-					mHooks.AddChatTextRaw(pieces[i], colors[i], chatTextTarget);
-			}
-		}
-#endif
 	}
 }

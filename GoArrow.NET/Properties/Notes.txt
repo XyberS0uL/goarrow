@@ -3,6 +3,9 @@ To-do:
 	- Arrow context menu
 	
 Changes:
+1.2.0.2
+	- The update URL now saves.
+	
 1.2.0.1
 	- Fixed a bug that occasionally caused a NullReferenceException.
 	- Fixed a bug where you occasionally had to click "Locate on map" twice 

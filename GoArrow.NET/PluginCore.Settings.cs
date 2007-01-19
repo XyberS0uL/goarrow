@@ -346,9 +346,9 @@ namespace GoArrow
 						case "Util.DefaultTargetWindows":
 							{
 								ChatWindow windows;
-								if (Util.TryParseEnum<ChatWindow>(val, out windows) && windows != ChatWindow.None)
+								if (Util.TryParseEnum<ChatWindow>(val, out windows) && windows != ChatWindow.Default)
 								{
-									Util.DefaultTargetWindows = windows;
+									Util.DefaultWindow = windows;
 								}
 							}
 							break;
@@ -359,11 +359,11 @@ namespace GoArrow
 							{
 								switch (intVal)
 								{
-									case 0: { Util.DefaultTargetWindows = ChatWindow.MainChat; break; }
-									case 1: { Util.DefaultTargetWindows = ChatWindow.One; break; }
-									case 2: { Util.DefaultTargetWindows = ChatWindow.Two; break; }
-									case 3: { Util.DefaultTargetWindows = ChatWindow.Three; break; }
-									case 4: { Util.DefaultTargetWindows = ChatWindow.Four; break; }
+									case 0: { Util.DefaultWindow = ChatWindow.MainChat; break; }
+									case 1: { Util.DefaultWindow = ChatWindow.One; break; }
+									case 2: { Util.DefaultWindow = ChatWindow.Two; break; }
+									case 3: { Util.DefaultWindow = ChatWindow.Three; break; }
+									case 4: { Util.DefaultWindow = ChatWindow.Four; break; }
 								}
 							}
 							break;
@@ -690,7 +690,7 @@ namespace GoArrow
 				// Settings > Chat Tab
 				AddSetting(doc, "chkTrackCorpses", chkTrackCorpses.Checked);
 				AddSetting(doc, "chkLinkCoords", chkLinkCoords.Checked);
-				AddSetting(doc, "Util.DefaultTargetWindows", Util.DefaultTargetWindows);
+				AddSetting(doc, "Util.DefaultTargetWindows", Util.DefaultWindow);
 				AddSetting(doc, "chkAlwaysShowErrors", chkAlwaysShowErrors.Checked);
 				AddSetting(doc, "edtChatCommand", edtChatCommand.Text);
 				AddSetting(doc, "chkEnableCoordsCommand", chkEnableCoordsCommand.Checked);
