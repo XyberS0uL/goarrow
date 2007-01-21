@@ -5,6 +5,7 @@ To-do:
 Changes:
 1.2.0.2
 	- The update URL now saves.
+	- Dungeon HUD eats mouse clicks.
 	
 1.2.0.1
 	- Fixed a bug that occasionally caused a NullReferenceException.
