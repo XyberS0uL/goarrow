@@ -430,9 +430,7 @@ namespace GoArrow
 					else
 					{
 						Error("Invalid chat action ID. Only " + MaxChatActions + " chat actions can be active at once");
-
 					}
-
 				}
 				else if (e.Id == ChatLinkId)
 				{
