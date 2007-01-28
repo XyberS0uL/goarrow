@@ -461,12 +461,21 @@ namespace GoArrow.Huds
 			set { CenterOnCoords(value); }
 		}
 
+		/// <summary>
+		/// Gets the zoom multiplier, not accounting for any constraints that 
+		/// occurred by painting when the map was zoom all the way out.
+		/// </summary>
 		public float Zoom
 		{
 			get { return mZoomMultiplier; }
 			set { ZoomFactor = Math.Log(value, ZoomBase); }
 		}
 
+		/// <summary>
+		/// Gets the current zoom multiplier, as it was last painted.  This 
+		/// accounts for the zoom limiting that happens when the map is zoomed 
+		/// all the way out.
+		/// </summary>
 		private float ActualZoom
 		{
 			get { return mActualZoom; }
@@ -905,7 +914,8 @@ namespace GoArrow.Huds
 
 		public bool IsDungeon(int landblock)
 		{
-			return (landblock & 0x0000FF00) != 0;
+			return Util.IsDungeon(landblock);
+			//return (landblock & 0x0000FF00) != 0;
 		}
 
 		public override void RecreateHud()
@@ -927,6 +937,20 @@ namespace GoArrow.Huds
 		{
 			if (ClientVisible)
 			{
+				if (CenterOnPlayer)
+				{
+					PointF playerPoint = CoordsToPix(PlayerCoords, Zoom);
+
+					float dX = playerPoint.X - ClientSize.Width / 2.0f;
+					float dY = playerPoint.X - ClientSize.Height / 2.0f;
+
+					// More than 4 pixels away from the center
+					if (dX * dX + dY * dY > 16)
+					{
+						mNeedsPlayerRecenter = true;
+						RepaintAll();
+					}
+				}
 				PaintSprites(Zoom);
 				mSpriteHud.Enabled = ClientVisible;
 				mSpriteHud.Alpha = AlphaFrame;

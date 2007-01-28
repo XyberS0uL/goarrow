@@ -34,13 +34,14 @@ using ProcessStartInfo = System.Diagnostics.ProcessStartInfo;
 
 using Decal.Adapter;
 using Decal.Adapter.Wrappers;
+using Decal.Filters;
 
 namespace GoArrow
 {
 	public delegate void QueuedAction();
 
 	[Flags]
-	enum ChatWindow
+	public enum ChatWindow
 	{
 		Default = 0,
 		MainChat = 0x01,
@@ -51,7 +52,7 @@ namespace GoArrow
 		All = MainChat | One | Two | Three | Four
 	}
 
-	static class Util
+	public static class Util
 	{
 		public const int MainChat = 1;
 
@@ -78,10 +79,13 @@ namespace GoArrow
 		private static string mPluginName = "";
 		private static string mBasePath = null;
 		private static PluginHost mHost = null;
+		private static CoreManager mCore = null;
+		private static FileService mFileService = null;
 		private static Thread mMainPluginThread = null;
 		private static ChatWindow mDefaultWindow;
 		private static bool mWriteErrorsToMainChat;
 		private static int mNumExceptionsWritten;
+		private static Dictionary<int, bool> mIsDungeonCache = new Dictionary<int, bool>();
 
 		private static Queue<QueuedAction> mQueuedActions;
 		private static WindowsTimer mActionQueueTimer;
@@ -94,7 +98,7 @@ namespace GoArrow
 		private static string mOpenPluginFolderCommand;
 		private static int mChatLinkId;
 
-		public static void Initialize(string pluginName, PluginHost host, string basePath)
+		public static void Initialize(string pluginName, PluginHost host, CoreManager core, string basePath)
 		{
 			mPluginName = pluginName;
 			mChatLinkId = pluginName.GetHashCode() & int.MaxValue;
@@ -102,7 +106,9 @@ namespace GoArrow
 			mOpenErrorsTxtCommand = null;
 			mOpenPluginFolderCommand = null;
 			mHost = host;
-			BasePath = basePath;
+			mCore = core;
+			mFileService = (FileService)core.FileService;
+			Util.BasePath = basePath;
 			mMainPluginThread = Thread.CurrentThread;
 
 			mDefaultWindow = ChatWindow.MainChat;
@@ -123,6 +129,8 @@ namespace GoArrow
 		public static void Dispose()
 		{
 			mHost = null;
+			mCore = null;
+			mFileService = null;
 			mMainPluginThread = null;
 
 			mQueuedActions.Clear();
@@ -167,6 +175,18 @@ namespace GoArrow
 		{
 			get { return mHost; }
 			set { mHost = value; }
+		}
+
+		public static CoreManager Core
+		{
+			get { return mCore; }
+			set { mCore = value; }
+		}
+
+		public static FileService FileService
+		{
+			get { return mFileService; }
+			set { mFileService = value; }
 		}
 
 		public static string BasePath
@@ -261,6 +281,46 @@ namespace GoArrow
 				return Host.Actions.Region3D;
 #endif
 			}
+		}
+
+		public static bool IsDungeon(int landblock)
+		{
+			if ((landblock & 0x0000FFFF) < 0x0100)
+			{
+				return false;
+			}
+
+			int dungeonId = (landblock >> 16) & 0xFFFF;
+			bool isDungeon;
+			if (mIsDungeonCache.TryGetValue(dungeonId, out isDungeon))
+			{
+				return isDungeon;
+			}
+
+			byte[] dungeonBlock = FileService.GetCellFile(landblock);
+
+			if (dungeonBlock == null || dungeonBlock.Length < 5)
+			{
+				// This shouldn't happen...
+				isDungeon = true;
+				if (dungeonBlock == null)
+				{
+					Util.Debug("Null cell file for landblock: " + landblock.ToString("X8"));
+				}
+				else
+				{
+					Util.Debug("Cell file is only " + dungeonBlock.Length 
+						+ " bytes long for landblock: " + landblock.ToString("X8"));
+				}
+			}
+			else
+			{
+				// Check whether it's a surface dwelling or a dungeon
+				isDungeon = (dungeonBlock[4] & 0x01) == 0;
+			}
+
+			mIsDungeonCache.Add(dungeonId, isDungeon);
+			return isDungeon;
 		}
 
 		public static void Message(string msg)

@@ -40,6 +40,8 @@ using GoArrow.RouteFinding;
 
 namespace GoArrow
 {
+	public delegate bool DefaultViewActiveDelegate();
+
 	[View("GoArrow.Properties.GoArrow.xml")]
 	[WireUpControlEvents]
 	public partial class PluginCore : PluginBase
@@ -72,6 +74,8 @@ namespace GoArrow
 		private WebClient mDownloadClient = new WebClient();
 		private int mDownloadSizeEstimate = 3000 * 1024; // 3,000 KB
 		private BackgroundWorker mXmlConverterWorker = new BackgroundWorker();
+
+		private bool mDefaultViewActive;
 		#endregion  Private Fields
 
 		#region Control references
@@ -545,6 +549,8 @@ namespace GoArrow
 		#region Init and Destroy
 		private void InitMainViewBeforeSettings()
 		{
+			mDefaultViewActive = false;
+
 			mRouteCopyIndex = 0;
 			mRouteStartLoc = null;
 			mRouteEndLoc = null;
@@ -855,6 +861,7 @@ namespace GoArrow
 				{
 					mMainViewToolButton.Selected = true;
 				}
+				mDefaultViewActive = true;
 			}
 			catch (Exception ex) { Util.HandleException(ex); }
 		}
@@ -867,6 +874,7 @@ namespace GoArrow
 				{
 					mMainViewToolButton.Selected = false;
 				}
+				mDefaultViewActive = false;
 			}
 			catch (Exception ex) { Util.HandleException(ex); }
 		}
@@ -1045,7 +1053,7 @@ namespace GoArrow
 		{
 			try
 			{
-				if (DefaultView.Activated && nbkMain.ActiveTab == MainTab.Atlas)
+				if (mDefaultViewActive && nbkMain.ActiveTab == MainTab.Atlas)
 				{
 					UpdateRelativeCoords();
 				}
@@ -1502,7 +1510,7 @@ namespace GoArrow
 		{
 			if (DefaultView.Position != rect)
 			{
-				bool reactivate = DefaultView.Activated && DefaultView.Position.Size != rect.Size;
+				bool reactivate = mDefaultViewActive && DefaultView.Position.Size != rect.Size;
 				DefaultView.Position = rect;
 				if (reactivate)
 				{

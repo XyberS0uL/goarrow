@@ -138,6 +138,7 @@ namespace GoArrow.Huds
 		private PluginHost mHost;
 		private CoreManager mCore;
 		private ViewWrapper mDefaultView;
+		DefaultViewActiveDelegate mDefaultViewActive;
 		private DecalTimer mRepaintHeartbeat;
 
 		private ToolTipHud mToolTip;
@@ -170,11 +171,12 @@ namespace GoArrow.Huds
 		///		method of the plugin. If this is false, you must call 
 		///		<see cref="StartHeartbeat()"/> at a later time, such as during 
 		///		the PlayerLogin event.</param>
-		public HudManager(PluginHost host, CoreManager core, ViewWrapper defaultView, bool startHeartbeatNow)
+		public HudManager(PluginHost host, CoreManager core, ViewWrapper defaultView, DefaultViewActiveDelegate defaultViewActive, bool startHeartbeatNow)
 		{
 			mHost = host;
 			mCore = core;
 			mDefaultView = defaultView;
+			mDefaultViewActive = defaultViewActive;
 
 			mToolTip = new ToolTipHud(this);
 
@@ -232,6 +234,7 @@ namespace GoArrow.Huds
 			mHost = null;
 			mCore = null;
 			mDefaultView = null;
+			mDefaultViewActive = null;
 
 			mDisposed = true;
 		}
@@ -413,6 +416,11 @@ namespace GoArrow.Huds
 			get { return mDefaultView; }
 		}
 
+		public bool DefaultViewActive
+		{
+			get { return mDefaultViewActive(); }
+		}
+
 		/// <summary>
 		/// Fires the ExceptionHandler event. Huds should call this function 
 		/// in the event of an unhandled exception that is in event handling 
@@ -486,7 +494,7 @@ namespace GoArrow.Huds
 		public bool MouseHoveringOnHud(IManagedHud hudToCheck)
 		{
 			//UpdateHudsListCopy();
-			if (DefaultView.Activated && DefaultView.Position.Contains(mMousePos))
+			if (DefaultViewActive && DefaultView.Position.Contains(mMousePos))
 			{
 				return false;
 			}
@@ -567,7 +575,7 @@ namespace GoArrow.Huds
 						mMousePos = new Point(e.LParam);
 					}
 					// Don't handle mouse events when the mouse is on the view
-					else if (DefaultView.Activated &&
+					else if (DefaultViewActive &&
 						(e.Msg == WM_LBUTTONDOWN || e.Msg == WM_MBUTTONDOWN ||
 						 e.Msg == WM_RBUTTONDOWN || e.Msg == WM_MOUSEWHEEL)
 						&& DefaultView.Position.Contains(new Point(e.LParam)))
