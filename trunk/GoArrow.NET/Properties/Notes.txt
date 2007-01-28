@@ -4,8 +4,16 @@ To-do:
 	
 Changes:
 1.2.0.2
+	- Refactored File Locations.
+	- Switched to SVN on GoogleCode instead of VSS.
+	
 	- The update URL now saves.
 	- Dungeon HUD eats mouse clicks.
+	- Workaround for bug in Decal where DefaultView.Activated could be 
+		incorrectly set to true when the plugin was initialized.
+	- Update house information after login complete if it's available.
+	- The map should now center on the player when it's first opened and 
+		"Center on player" is selected.
 	
 1.2.0.1
 	- Fixed a bug that occasionally caused a NullReferenceException.

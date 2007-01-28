@@ -104,7 +104,6 @@ namespace GoArrow
 		public static double LandblockToEW(int landcell, double xOffset)
 		{
 			uint l = (uint)((landcell & 0xFF000000) / 0x200000);
-			if (l < 0) { l += 2048; }
 			return (l + xOffset / 24.0 - 1019.5) / 10.0;
 		}
 

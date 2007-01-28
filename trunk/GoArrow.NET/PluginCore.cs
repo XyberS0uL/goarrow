@@ -88,13 +88,14 @@ namespace GoArrow
 		private Coordinates mHouseCoords = Coordinates.NO_COORDINATES;
 
 		private WindowsTimer mDatabaseReminderDelay;
+		private DateTime mLoginTime;
 
 		#region Startup and Shutdown
 		protected override void Startup()
 		{
 			try
 			{
-				Util.Initialize("GoArrow", Host, base.Path);
+				Util.Initialize("GoArrow", Host, Core, base.Path);
 				System.Threading.Thread.CurrentThread.CurrentCulture
 					= new System.Globalization.CultureInfo("en-US", false);
 
@@ -121,7 +122,7 @@ namespace GoArrow
 				mRecallingToLSTie = RecallStep.NotRecalling;
 				mRecallingToBindstone = RecallStep.NotRecalling;
 
-				mHudManager = new HudManager(Host, Core, DefaultView, false);
+				mHudManager = new HudManager(Host, Core, DefaultView, delegate() { return mDefaultViewActive; }, false);
 				mHudManager.ExceptionHandler += new EventHandler<ExceptionEventArgs>(HudManager_ExceptionHandler);
 				GraphicsReset += new EventHandler(mHudManager.GraphicsReset);
 				WindowMessage += new EventHandler<WindowMessageEventArgs>(mHudManager.DispatchWindowMessage);
@@ -174,6 +175,8 @@ namespace GoArrow
 
 				mRecallTimeout = new WindowsTimer();
 				mRecallTimeout.Tick += new EventHandler(RecallTimeout_Tick);
+
+				mLoginTime = DateTime.Now;
 
 #if USING_D3D_CONTAINER
 				RouteStart.Initialize(110011, "Digero", 220022, "DaBug", "DebugAccount");
@@ -276,6 +279,15 @@ namespace GoArrow
 						MessageStruct position = e.Message.Struct("position");
 						mHouseCoords = new Coordinates(position.Value<int>("landcell"),
 							position.Value<float>("y"), position.Value<float>("x"), 1);
+
+						if (mLoginCompleted && chkAutoUpdateRecalls.Checked)
+						{
+							// Don't notify if the user logged in less than 1 minute ago
+							// If the user logged in more than 1 minute ago, chances are
+							// they're purchasing a house.
+							bool quiet = (DateTime.Now - mLoginTime) < TimeSpan.FromMinutes(1);
+							UpdateStartLocation(mHouseCoords, RouteStartType.HouseRecall, quiet);
+						}
 					}
 				}
 			}
@@ -292,11 +304,12 @@ namespace GoArrow
 					FinishInitializing();
 				}
 
-				// Update house recall; coords obtained from the 
-				// House Information for Owners game event
+				mLoginTime = DateTime.Now;
+
+				// Update house recall; coords obtained from the House Information game event
 				if (chkAutoUpdateRecalls.Checked)
 				{
-					UpdateStartLocation(mHouseCoords, RouteStartType.HouseRecall);
+					UpdateStartLocation(mHouseCoords, RouteStartType.HouseRecall, true);
 				}
 
 				if (!mLoginCompleted)
@@ -316,7 +329,6 @@ namespace GoArrow
 			LoadSettings();
 			InitMainViewAfterSettings();
 			PortalDevice.MansionRunDistance = GetStartLocationByType(RouteStartType.MansionRecall).RunDistance;
-
 
 			if (chkUpdateRemind.Checked && (DateTime.Now - mLocDb.LastUpdate).TotalDays > 30)
 			{
@@ -399,7 +411,7 @@ namespace GoArrow
 				switch (e.Title)
 				{
 					case "GA:GUI":
-						if (DefaultView.Activated)
+						if (mDefaultViewActive)
 							DefaultView.Deactivate();
 						else
 							DefaultView.Activate();
@@ -452,7 +464,7 @@ namespace GoArrow
 
 		private void MainViewToolButton_Click(object sender, EventArgs e)
 		{
-			DefaultView.Activated = !DefaultView.Activated;
+			DefaultView.Activated = !mDefaultViewActive;
 		}
 
 		private void ArrowToolButton_Click(object sender, EventArgs e)
@@ -1473,6 +1485,11 @@ namespace GoArrow
 
 		private void UpdateStartLocation(Coordinates coords, RouteStartType type)
 		{
+			UpdateStartLocation(coords, type, false);
+		}
+
+		private void UpdateStartLocation(Coordinates coords, RouteStartType type, bool quiet)
+		{
 			if (!chkAutoUpdateRecalls.Checked)
 				return;
 
@@ -1481,7 +1498,7 @@ namespace GoArrow
 			{
 				startLoc.Coords = coords;
 				RefreshStartLocationListCoords();
-				if (startLoc.Enabled)
+				if (startLoc.Enabled && !quiet)
 					Util.Message(startLoc.Name + " start location set to " + startLoc.Coords);
 			}
 		}

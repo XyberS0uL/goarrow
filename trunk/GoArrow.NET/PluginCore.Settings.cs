@@ -227,9 +227,6 @@ namespace GoArrow
 							break;
 						// -- Old ^
 
-						case "DerethMap.CoordsAtCenter":
-							if (Coordinates.TryParse(val, out coords)) { mMapHud.CoordsAtCenter = coords; }
-							break;
 						case "DerethMap.Zoom":
 							if (double.TryParse(val, out dblVal)) { mMapHud.Zoom = (float)dblVal; }
 							break;
@@ -651,7 +648,6 @@ namespace GoArrow
 				AddSetting(doc, "DerethMap.ShowLocations", mMapHud.ShowLocations);
 				AddSetting(doc, "DerethMap.ShowLocationsAllZooms", mMapHud.ShowLocationsAllZooms);
 				AddSetting(doc, "DerethMap.ShowLabels", mMapHud.ShowLabels);
-				AddSetting(doc, "DerethMap.CoordsAtCenter", mMapHud.CoordsAtCenter);
 				AddSetting(doc, "DerethMap.Zoom", mMapHud.Zoom);
 				AddSetting(doc, "DerethMap.DragButton", mMapHud.DragButton);
 				AddSetting(doc, "DerethMap.SelectLocationButton", mMapHud.SelectLocationButton);
