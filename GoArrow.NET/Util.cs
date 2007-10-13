@@ -460,26 +460,34 @@ namespace GoArrow
 			return "<Tell:IIDString:" + ChatLinkId + ":" + command + ">" + text + @"<\Tell>";
 		}
 
+		private static string ChatActionCommand
+		{
+			get
+			{
+				if (mChatActionCommand == null)
+				{
+					mChatActionCommand = Regex.Replace(PluginName, @"[^A-Za-z]", "") + "_ChatCommand";
+				}
+				return mChatActionCommand;
+			}
+		}
+
 		public static string CreateChatCommand(string text, QueuedAction action)
 		{
-			if (mChatActionCommand == null)
-			{
-				mChatActionCommand = Regex.Replace(PluginName, @"[^A-Za-z]", "") + "_ChatCommand";
-			}
 			if (mChatActions.Count >= MaxChatActions)
 			{
 				mChatActions.RemoveAt(0);
 			}
 			int id = mNextChatActionId++;
 			mChatActions[id] = action;
-			return "<Tell:IIDString:" + id + ":" + mChatActionCommand + ">" + text + @"<\Tell>";
+			return "<Tell:IIDString:" + id + ":" + ChatActionCommand + ">" + text + @"<\Tell>";
 		}
 
 		public static void HandleChatCommand(object sender, ChatClickInterceptEventArgs e)
 		{
 			try
 			{
-				if (e.Text == mChatActionCommand)
+				if (e.Text == ChatActionCommand)
 				{
 					e.Eat = true;
 					QueuedAction action;
@@ -575,8 +583,8 @@ namespace GoArrow
 				{
 					if (mOpenErrorsTxtCommand == null)
 					{
-						mOpenErrorsTxtCommand = mChatActionCommand + "_ErrorsTxt";
-						mOpenPluginFolderCommand = mChatActionCommand + "_PluginFolder";
+						mOpenErrorsTxtCommand = ChatActionCommand + "_ErrorsTxt";
+						mOpenPluginFolderCommand = ChatActionCommand + "_PluginFolder";
 					}
 					string errorsTxt = MakeChatLink(mOpenErrorsTxtCommand, "errors.txt");
 					string pluginFolder = MakeChatLink(mOpenPluginFolderCommand, PluginName + " folder");
