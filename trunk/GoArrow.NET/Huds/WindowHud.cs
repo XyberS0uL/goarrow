@@ -36,7 +36,7 @@ using System.Xml;
 
 namespace GoArrow.Huds
 {
-	public abstract class WindowHud : IManagedHud
+	public abstract class WindowHud : IManagedHud, IWin32Window
 	{
 		[DllImport("user32.dll")]
 		private static extern bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
@@ -67,8 +67,10 @@ namespace GoArrow.Huds
 		protected static readonly Color Clear = Color.FromArgb(0);
 
 		#region Private Fields
+		private bool mUsingWindows = true;
 		private HudManager mManager;
 		private Hud mHud = null;
+		private Form mForm = null;
 		private Bitmap mClientImage;
 		private volatile bool mWindowNeedsRepaint = false, mBordersNeedRepaint = false;
 		private volatile bool mClientNeedsRepaint = false, mClientImageLost = true;
@@ -312,6 +314,11 @@ namespace GoArrow.Huds
 			if (mDisposed)
 				return;
 
+			if (mForm != null)
+			{
+				mForm.Dispose();
+			}
+
 			MouseEnter -= FadeIn;
 			MouseLeave -= FadeOut;
 
@@ -323,6 +330,102 @@ namespace GoArrow.Huds
 			mVisible = false;
 
 			mDisposed = true;
+		}
+		#endregion
+
+		#region Form Event Handlers
+		private void RegisterFormEvents()
+		{
+			mForm.FormClosed += new FormClosedEventHandler(mForm_FormClosed);
+			mForm.VisibleChanged += new EventHandler(mForm_VisibleChanged);
+			mForm.Resize += new EventHandler(mForm_Resize);
+			mForm.ResizeEnd += new EventHandler(mForm_ResizeEnd);
+			mForm.Move += new EventHandler(mForm_Move);
+			mForm.MouseMove += new MouseEventHandler(mForm_MouseMove);
+			mForm.MouseDown += new MouseEventHandler(mForm_MouseDown);
+			mForm.MouseUp += new MouseEventHandler(mForm_MouseUp);
+			mForm.MouseDoubleClick += new MouseEventHandler(mForm_MouseDoubleClick);
+			mForm.MouseWheel += new MouseEventHandler(mForm_MouseWheel);
+			mForm.MouseEnter += new EventHandler(mForm_MouseEnter);
+			mForm.MouseLeave += new EventHandler(mForm_MouseLeave);
+		}
+
+		private void Fire(EventHandler evt)
+		{
+			if (evt != null)
+				evt(this, EventArgs.Empty);
+		}
+
+		private void mForm_FormClosed(object sender, FormClosedEventArgs e)
+		{
+			this.mVisible = false;
+			Fire(VisibleChanged);
+			Fire(ClientVisibleChanged);
+		}
+
+		private void mForm_VisibleChanged(object sender, EventArgs e)
+		{
+			this.mVisible = mForm.Visible;
+			Fire(VisibleChanged);
+			Fire(ClientVisibleChanged);
+		}
+
+		private void mForm_Resize(object sender, EventArgs e)
+		{
+			this.mRegion = mForm.Region;
+			this.mClientRegion = mForm.ClientRectangle;
+			Fire(Resizing);
+		}
+
+		private void mForm_ResizeEnd(object sender, EventArgs e)
+		{
+			this.mRegion = mForm.Region;
+			this.mClientRegion = mForm.ClientRectangle;
+			Fire(ResizeEnd);
+		}
+
+		private void mForm_Move(object sender, EventArgs e)
+		{
+			this.mRegion = mForm.Bounds;
+			this.mClientRegion = mForm.ClientRectangle;
+			Fire(MoveEnd);
+		}
+
+		private void mForm_MouseMove(object sender, MouseEventArgs e)
+		{
+			this.mMouseLocation = e.Location;
+			this.mMouseOnClient = mForm.ClientRectangle.Contains(e.Location);
+			this.mMouseOnWindow = mForm.Bounds.Contains(e.Location);
+		}
+
+		private void mForm_MouseDown(object sender, MouseEventArgs e)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void mForm_MouseUp(object sender, MouseEventArgs e)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void mForm_MouseDoubleClick(object sender, MouseEventArgs e)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void mForm_MouseWheel(object sender, MouseEventArgs e)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void mForm_MouseEnter(object sender, EventArgs e)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void mForm_MouseLeave(object sender, EventArgs e)
+		{
+			throw new NotImplementedException();
 		}
 		#endregion
 
@@ -566,6 +669,11 @@ namespace GoArrow.Huds
 		protected MouseButtons ClientMouseButtons
 		{
 			get { return mClientMouseButtons; }
+		}
+
+		IntPtr IWin32Window.Handle
+		{
+			get { return Host.Decal.Hwnd; }
 		}
 
 		#region Region Accessors
@@ -1071,6 +1179,9 @@ namespace GoArrow.Huds
 			if (Heartbeat != null)
 				Heartbeat(this, EventArgs.Empty);
 
+			if (mUsingWindows)
+				return;
+
 			if (!Visible)
 			{
 				DisposeHudsInternal();
@@ -1114,21 +1225,46 @@ namespace GoArrow.Huds
 		/// </summary>
 		public virtual void RecreateHud()
 		{
-			DisposeHudsInternal();
-			if (Visible)
+			if (mUsingWindows)
 			{
-				mHud = Host.Render.CreateHud(new Rectangle(mRegion.Location, MaxSize));
-				mHud.Enabled = true;
-				mHud.Alpha = AlphaFrame;
+				if (mForm == null)
+				{
+					mForm = new Form();
+					mForm.Text = Title;
+				}
+				if (Visible)
+				{
+					mForm.Show(this);
+				}
+			}
+			else
+			{
+				DisposeHudsInternal();
+				if (Visible)
+				{
+					mHud = Host.Render.CreateHud(new Rectangle(mRegion.Location, MaxSize));
+					mHud.Enabled = true;
+					mHud.Alpha = AlphaFrame;
 
-				PaintWindowInternal();
-				//DrawClientImage();
+					PaintWindowInternal();
+					//DrawClientImage();
+				}
 			}
 		}
 
 		private bool HudsAreCreated
 		{
-			get { return mHud != null && !mHud.Lost; }
+			get
+			{
+				if (mUsingWindows)
+				{
+					return mForm != null;
+				}
+				else
+				{
+					return mHud != null && !mHud.Lost;
+				}
+			}
 		}
 
 		private void DisposeHudsInternal()
@@ -1144,8 +1280,15 @@ namespace GoArrow.Huds
 
 		private void RepaintWindow()
 		{
-			mWindowNeedsRepaint = true;
-			// The repaint will happen in RepaintHeartbeat(), next frame
+			if (mUsingWindows)
+			{
+				mForm.Invalidate();
+			}
+			else
+			{
+				// The repaint will happen in RepaintHeartbeat(), next frame
+				mWindowNeedsRepaint = true;
+			}
 		}
 
 		private void RepaintBorders()
@@ -1322,7 +1465,7 @@ namespace GoArrow.Huds
 
 		private void DrawControlBoxes(bool inRender)
 		{
-			if (!HudsAreCreated)
+			if (mUsingWindows || !HudsAreCreated)
 				return;
 
 			if (!inRender) { mHud.BeginRender(); }
@@ -1421,6 +1564,8 @@ namespace GoArrow.Huds
 		///		not within valid ranges.</exception>
 		private void FadeAlpha(int finalAlphaFrame, long durationMillis, int initialDelayMillis)
 		{
+			if (mUsingWindows)
+				return;
 
 			if (finalAlphaFrame < 0) { finalAlphaFrame = 0; }
 			if (finalAlphaFrame > 255) { finalAlphaFrame = 255; }
@@ -1511,7 +1656,7 @@ namespace GoArrow.Huds
 				WindowMessage(this, e);
 
 			// Only process mouse messages when the window is visible
-			if (!Visible || e.Msg < WM_MOUSEFIRST || e.Msg > WM_MOUSELAST)
+			if (mUsingWindows || !Visible || e.Msg < WM_MOUSEFIRST || e.Msg > WM_MOUSELAST)
 				return;
 
 			Point prevLocation = mMouseLocation;
