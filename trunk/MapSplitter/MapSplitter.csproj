@@ -46,7 +46,7 @@
   <ItemGroup>
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.84.0.0, Culture=neutral, PublicKeyToken=1b03e6acf1164f73">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\GoArrow.NET\ICSharpCode.SharpZipLib.dll</HintPath>
+      <HintPath>..\GoArrow\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -70,7 +70,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GoArrow.NET\GoArrow.csproj">
+    <ProjectReference Include="..\GoArrow\GoArrow.csproj">
       <Project>{8773BE99-06D0-4C16-B9F1-0222640C9798}</Project>
       <Name>GoArrow</Name>
     </ProjectReference>
