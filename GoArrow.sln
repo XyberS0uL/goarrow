@@ -1,13 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoArrow", "GoArrow.NET\GoArrow.csproj", "{8773BE99-06D0-4C16-B9F1-0222640C9798}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoArrow", "GoArrow\GoArrow.csproj", "{8773BE99-06D0-4C16-B9F1-0222640C9798}"
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "GoArrow Installer", "GoArrow Installer\GoArrow Installer.vdproj", "{46DDF2F2-472D-40D2-900A-6AEAB9363900}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapSplitter", "MapSplitter\MapSplitter.csproj", "{5B743111-7B56-4850-ADED-2ECE4796EEC1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoArrow Explorer", "GoArrowExplorer\GoArrow Explorer.csproj", "{A7A04CA3-AED4-4C8A-8C14-B42C95363846}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,14 +35,6 @@ Global
 		{5B743111-7B56-4850-ADED-2ECE4796EEC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5B743111-7B56-4850-ADED-2ECE4796EEC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5B743111-7B56-4850-ADED-2ECE4796EEC1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Debug AC|Any CPU.ActiveCfg = Debug|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Debug AC|Any CPU.Build.0 = Debug|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Debug D3D|Any CPU.ActiveCfg = Debug|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Debug D3D|Any CPU.Build.0 = Debug|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A7A04CA3-AED4-4C8A-8C14-B42C95363846}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
